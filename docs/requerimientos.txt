@@ -1,0 +1,63 @@
+Objetivo General: Crear una aplicación móvil que permita registrar el roster de un equipo de softball, anotar jugadas y generar estadísticas, de forma simple, intuitiva y funcional sin conexión a internet. Ideal para que cualquier persona, incluso sin conocimientos técnicos o deportivos avanzados, pueda utilizarla.
+
+✅ Requerimientos Funcionales (MVP)
+
+Gestión del Roster:
+
+Añadir jugadores con nombre, número y múltiples posiciones.
+
+Marcar jugadores como titulares o reservas.
+
+Editar o eliminar jugadores fácilmente.
+
+Creación y Control de Partidos:
+
+Registrar nuevo partido con fecha, rival y lugar.
+
+Seleccionar titulares y reservas del roster.
+
+Ordenar la alineación ofensiva mediante drag & drop.
+
+Asignar posiciones defensivas a cada jugador.
+
+Anotación de Jugadas:
+
+Registrar jugadas por jugador: hit, out, BB, K, carrera, RBI.
+
+Posibilidad de sustituir jugadores y cambiar posiciones en juego.
+
+Estadísticas del Equipo y Jugadores:
+
+Promedios y acumulados básicos por jugador (AB, H, AVG, R, RBI).
+
+Estadísticas por partido o totales.
+
+Funcionalidad Offline:
+
+Toda la app debe funcionar sin internet.
+
+Se debe almacenar todo localmente en el dispositivo.
+
+Sincronización Automática:
+
+Cuando haya internet disponible, la app debe sincronizar los datos automáticamente sin intervención del usuario.
+
+⚙️ Requerimientos Técnicos
+
+La app debe estar construida en Flutter (iOS + Android).
+
+La persistencia de datos debe hacerse usando Appwrite, que ofrece:
+
+Base de datos local y remota
+
+Sincronización automática
+
+API y SDK para Flutter
+
+El manejo de estado debe hacerse con signals:
+
+https://pub.dev/packages/signals
+
+La interfaz de usuario debe usar flutter-shadcn-ui:
+
+https://github.com/nank1ro/flutter-shadcn-ui
