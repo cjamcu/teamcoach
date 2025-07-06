@@ -50,7 +50,7 @@ class Game {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      // 'id': id,
       'team_id': teamId,
       'opponent': opponent,
       'location': location,

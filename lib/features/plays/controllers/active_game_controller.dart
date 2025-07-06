@@ -4,6 +4,7 @@ import '../../../shared/models/game.dart';
 import '../../../shared/models/game_lineup.dart';
 import '../../../shared/models/player.dart';
 import '../models/play.dart';
+import '../services/game_state_persistence_service.dart';
 
 class ActiveGameController {
   static final _uuid = Uuid();
@@ -269,31 +270,47 @@ class ActiveGameController {
   }
   
   void _updateRunners(Play play) {
-    // Simplified runner advancement logic
-    // In a real implementation, this would be more sophisticated
     final runners = Map<String, String>.from(runnersOnBaseSignal.value);
     
     if (play.isHit) {
-      // Add current batter to first base
-      runners['1B'] = play.playerId;
-      
-      // Advance existing runners based on hit type
+      // Advance existing runners first, then add batter
       switch (play.result) {
         case 'single':
           _advanceRunners(runners, 1);
+          runners['1B'] = play.playerId; // Add batter to first
           break;
         case 'double':
           _advanceRunners(runners, 2);
+          runners['2B'] = play.playerId; // Add batter to second
           break;
         case 'triple':
           _advanceRunners(runners, 3);
+          runners['3B'] = play.playerId; // Add batter to third
           break;
         case 'home_run':
-          runners.clear(); // Everyone scores
+          runners.clear(); // Everyone scores including batter
           break;
       }
     } else if (play.isWalk) {
-      // Force advance if bases loaded, otherwise just add to first
+      // Check if bases are loaded for force advance
+      if (runners.containsKey('1B') && runners.containsKey('2B') && runners.containsKey('3B')) {
+        // Force advance all runners
+        runners.remove('3B'); // Runner on third scores
+      } else if (runners.containsKey('1B') && runners.containsKey('2B')) {
+        // Move runner from second to third
+        if (runners.containsKey('2B')) {
+          runners['3B'] = runners['2B']!;
+          runners.remove('2B');
+        }
+        // Move runner from first to second
+        if (runners.containsKey('1B')) {
+          runners['2B'] = runners['1B']!;
+        }
+      } else if (runners.containsKey('1B')) {
+        // Move runner from first to second
+        runners['2B'] = runners['1B']!;
+      }
+      // Add batter to first base
       runners['1B'] = play.playerId;
     }
     
@@ -385,6 +402,97 @@ class ActiveGameController {
     }
   }
   
+  // Save current game state
+  Future<void> saveGameState() async {
+    final game = gameSignal.value;
+    if (game == null) return;
+
+    final controllerState = GameStatePersistenceService.extractControllerState(
+      currentInning: currentInningSignal.value,
+      isTopOfInning: isTopOfInningSignal.value,
+      currentBatterIndex: currentBatterIndexSignal.value,
+      teamScore: teamScoreSignal.value,
+      opponentScore: opponentScoreSignal.value,
+      outs: outsSignal.value,
+      runnersOnBase: runnersOnBaseSignal.value,
+      strikes: strikesSignal.value,
+      balls: ballsSignal.value,
+      inningScores: inningScoresSignal.value,
+      isGameActive: isGameActiveSignal.value,
+    );
+
+    await GameStatePersistenceService.saveGameState(
+      game: game,
+      lineup: lineupSignal.value,
+      plays: playsSignal.value,
+      controllerState: controllerState,
+    );
+  }
+
+  // Load saved game state
+  Future<bool> loadGameState() async {
+    final gameStateData = await GameStatePersistenceService.loadGameState();
+    if (gameStateData == null) return false;
+
+    try {
+      // Restore game and basic data
+      gameSignal.value = gameStateData.game;
+      lineupSignal.value = gameStateData.lineup;
+      playsSignal.value = gameStateData.plays;
+
+      // Restore controller state
+      final state = gameStateData.controllerState;
+      currentInningSignal.value = state['currentInning'] ?? 1;
+      isTopOfInningSignal.value = state['isTopOfInning'] ?? true;
+      currentBatterIndexSignal.value = state['currentBatterIndex'] ?? 0;
+      teamScoreSignal.value = state['teamScore'] ?? 0;
+      opponentScoreSignal.value = state['opponentScore'] ?? 0;
+      outsSignal.value = state['outs'] ?? 0;
+      strikesSignal.value = state['strikes'] ?? 0;
+      ballsSignal.value = state['balls'] ?? 0;
+      isGameActiveSignal.value = state['isGameActive'] ?? false;
+
+      // Restore runners on base
+      final runnersData = state['runnersOnBase'] as Map<String, dynamic>?;
+      if (runnersData != null) {
+        runnersOnBaseSignal.value = runnersData.cast<String, String>();
+      } else {
+        runnersOnBaseSignal.value = {};
+      }
+
+      // Restore inning scores
+      final inningScoresData = state['inningScores'] as Map<String, dynamic>?;
+      if (inningScoresData != null) {
+        final inningScores = <int, Map<String, int>>{};
+        for (final entry in inningScoresData.entries) {
+          final inningNum = int.tryParse(entry.key);
+          if (inningNum != null && entry.value is Map) {
+            inningScores[inningNum] = (entry.value as Map).cast<String, int>();
+          }
+        }
+        inningScoresSignal.value = inningScores;
+      } else {
+        inningScoresSignal.value = {};
+      }
+
+      return true;
+    } catch (e) {
+      // If restoration fails, clear corrupted data and return false
+      await GameStatePersistenceService.clearGameState();
+      return false;
+    }
+  }
+
+  // Clear saved game state
+  Future<void> clearSavedGameState() async {
+    await GameStatePersistenceService.clearGameState();
+  }
+
+  // Check if there's a saved game
+  static Future<bool> hasSavedGame() async {
+    return await GameStatePersistenceService.hasSavedGameState();
+  }
+
   // Reset/cleanup
   void resetGame() {
     gameSignal.value = null;

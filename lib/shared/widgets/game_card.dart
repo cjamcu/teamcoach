@@ -234,71 +234,76 @@ class GameCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       if (game.isScheduled && !hasLineup && onConfigureLineup != null) ...[
-                        Expanded(
-                          child: ShadButton(
-                            onPressed: onConfigureLineup,
-                            size: ShadButtonSize.sm,
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.settings, size: 16),
-                                SizedBox(width: 4),
-                                Text('Configurar Alineación'),
-                              ],
-                            ),
+                        ShadButton(
+                          onPressed: onConfigureLineup,
+                          size: ShadButtonSize.sm,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.settings, size: 16),
+                              SizedBox(width: 4),
+                              Text('Alineación'),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 8),
                       ] else if (game.isScheduled && hasLineup && onStart != null) ...[
-                        Expanded(
-                          child: ShadButton.outline(
-                            onPressed: onStart,
-                            size: ShadButtonSize.sm,
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.play_arrow, size: 16),
-                                SizedBox(width: 4),
-                                Text('Iniciar'),
-                              ],
-                            ),
+                        ShadButton.outline(
+                          onPressed: onStart,
+                          size: ShadButtonSize.sm,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.play_arrow, size: 16),
+                              SizedBox(width: 4),
+                              Text('Iniciar'),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 8),
                       ],
                       if (game.isInProgress && onFinish != null) ...[
-                        Expanded(
-                          child: ShadButton(
-                            onPressed: onFinish,
-                            size: ShadButtonSize.sm,
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.stop, size: 16),
-                                SizedBox(width: 4),
-                                Text('Finalizar'),
-                              ],
-                            ),
+                        ShadButton(
+                          onPressed: onFinish,
+                          size: ShadButtonSize.sm,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.stop, size: 16),
+                              SizedBox(width: 4),
+                              Text('Finalizar'),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 8),
                       ],
                       if (onEdit != null) ...[
-                        Expanded(
-                          child: ShadButton.outline(
-                            onPressed: onEdit,
-                            size: ShadButtonSize.sm,
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.edit, size: 16),
-                                SizedBox(width: 4),
-                                Text('Editar'),
-                              ],
-                            ),
+                        ShadButton.outline(
+                          onPressed: onEdit,
+                          size: ShadButtonSize.sm,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit, size: 16),
+                              SizedBox(width: 4),
+                              Text('Editar'),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (onDelete != null) ...[
+                        ShadButton.outline(
+                          onPressed: onDelete,
+                          size: ShadButtonSize.sm,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.delete, size: 16),
+                              SizedBox(width: 4),
+                              Text('Eliminar'),
+                            ],
                           ),
                         ),
                       ],
@@ -378,6 +383,7 @@ class GameCard extends StatelessWidget {
     return (game.isScheduled && !hasLineup && onConfigureLineup != null) ||
            (game.isScheduled && hasLineup && onStart != null) ||
            (game.isInProgress && onFinish != null) ||
-           onEdit != null;
+           onEdit != null ||
+           onDelete != null;
   }
 } 

@@ -47,7 +47,7 @@ class ScoreboardWidget extends StatelessWidget {
   Widget _buildInningsTable(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(color: ShadTheme.of(context).colorScheme.border),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Watch((context) {
@@ -59,91 +59,92 @@ class ScoreboardWidget extends StatelessWidget {
         final opponentTotal = controller.opponentScoreSignal.value;
         final totalInnings = controller.totalInningsSignal.value;
         
-        // Calculate column widths based on innings
-        final Map<int, TableColumnWidth> columnWidths = {
-          0: const FixedColumnWidth(80), // Team name column
-        };
-        
-        // Add innings columns
-        for (int i = 1; i <= totalInnings; i++) {
-          columnWidths[i] = const FixedColumnWidth(40);
-        }
-        
-        // Add total columns
-        columnWidths[totalInnings + 1] = const FixedColumnWidth(60); // R
-        columnWidths[totalInnings + 2] = const FixedColumnWidth(60); // H
-        columnWidths[totalInnings + 3] = const FixedColumnWidth(60); // E
-        
-        return Table(
-          columnWidths: columnWidths,
-          border: TableBorder(
-            horizontalInside: BorderSide(
-              color: Theme.of(context).dividerColor,
-              width: 0.5,
+        // Use responsive design for better visibility
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: MediaQuery.of(context).size.width - 32,
             ),
-            verticalInside: BorderSide(
-              color: Theme.of(context).dividerColor,
-              width: 0.5,
+            child: Table(
+              columnWidths: {
+                0: const FixedColumnWidth(100), // Team name column
+                for (int i = 1; i <= totalInnings; i++)
+                  i: const FixedColumnWidth(45), // Inning columns
+                totalInnings + 1: const FixedColumnWidth(50), // R
+                totalInnings + 2: const FixedColumnWidth(50), // H
+                totalInnings + 3: const FixedColumnWidth(50), // E
+              },
+              border: TableBorder(
+                horizontalInside: BorderSide(
+                  color: ShadTheme.of(context).colorScheme.border,
+                  width: 1,
+                ),
+                verticalInside: BorderSide(
+                  color: ShadTheme.of(context).colorScheme.border,
+                  width: 1,
+                ),
+              ),
+              children: [
+                // Header row
+                TableRow(
+                  decoration: BoxDecoration(
+                    color: ShadTheme.of(context).colorScheme.muted,
+                  ),
+                  children: [
+                    _buildTableHeader(context, 'Equipo'),
+                    for (int i = 1; i <= totalInnings; i++)
+                      _buildTableHeader(context, '$i'),
+                    _buildTableHeader(context, 'R', isTotal: true),
+                    _buildTableHeader(context, 'H', isTotal: true),
+                    _buildTableHeader(context, 'E', isTotal: true),
+                  ],
+                ),
+                
+                // Team row
+                TableRow(
+                  decoration: BoxDecoration(
+                    color: isTop && currentInning <= totalInnings
+                        ? ShadTheme.of(context).colorScheme.primary.withOpacity(0.1)
+                        : ShadTheme.of(context).colorScheme.background,
+                  ),
+                  children: [
+                    _buildTeamNameCell(context, 'Nosotros', isTop),
+                    for (int i = 1; i <= totalInnings; i++)
+                      _buildScoreCell(
+                        context,
+                        teamScores[i]?.toString() ?? '-',
+                        isActive: isTop && i == currentInning,
+                      ),
+                    _buildTotalCell(context, teamTotal.toString()),
+                    _buildTotalCell(context, '-'), // Hits placeholder
+                    _buildTotalCell(context, '-'), // Errors placeholder
+                  ],
+                ),
+                
+                // Opponent row
+                TableRow(
+                  decoration: BoxDecoration(
+                    color: !isTop && currentInning <= totalInnings
+                        ? ShadTheme.of(context).colorScheme.primary.withOpacity(0.1)
+                        : ShadTheme.of(context).colorScheme.background,
+                  ),
+                  children: [
+                    _buildTeamNameCell(context, controller.gameSignal.value?.opponent ?? 'Visitante', !isTop),
+                    for (int i = 1; i <= totalInnings; i++)
+                      _buildScoreCell(
+                        context,
+                        opponentScores[i]?.toString() ?? '-',
+                        isActive: !isTop && i == currentInning,
+                      ),
+                    _buildTotalCell(context, opponentTotal.toString()),
+                    _buildTotalCell(context, '-'), // Hits placeholder
+                    _buildTotalCell(context, '-'), // Errors placeholder
+                  ],
+                ),
+              ],
             ),
           ),
-          children: [
-            // Header row
-            TableRow(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-              ),
-              children: [
-                _buildTableHeader(context, 'Equipo'),
-                for (int i = 1; i <= totalInnings; i++)
-                  _buildTableHeader(context, '$i'),
-                _buildTableHeader(context, 'R', isTotal: true),
-                _buildTableHeader(context, 'H', isTotal: true),
-                _buildTableHeader(context, 'E', isTotal: true),
-              ],
-            ),
-            
-            // Team row
-            TableRow(
-              decoration: BoxDecoration(
-                color: isTop && currentInning <= totalInnings
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                    : null,
-              ),
-              children: [
-                _buildTeamNameCell(context, 'Nosotros', isTop),
-                for (int i = 1; i <= totalInnings; i++)
-                  _buildScoreCell(
-                    context,
-                    teamScores[i]?.toString() ?? '',
-                    isActive: isTop && i == currentInning,
-                  ),
-                _buildTotalCell(context, teamTotal.toString()),
-                _buildTotalCell(context, '-'), // Hits placeholder
-                _buildTotalCell(context, '-'), // Errors placeholder
-              ],
-            ),
-            
-            // Opponent row
-            TableRow(
-              decoration: BoxDecoration(
-                color: !isTop && currentInning <= totalInnings
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                    : null,
-              ),
-              children: [
-                _buildTeamNameCell(context, controller.gameSignal.value?.opponent ?? 'Visitante', !isTop),
-                for (int i = 1; i <= totalInnings; i++)
-                  _buildScoreCell(
-                    context,
-                    opponentScores[i]?.toString() ?? '',
-                    isActive: !isTop && i == currentInning,
-                  ),
-                _buildTotalCell(context, opponentTotal.toString()),
-                _buildTotalCell(context, '-'), // Hits placeholder
-                _buildTotalCell(context, '-'), // Errors placeholder
-              ],
-            ),
-          ],
         );
       }),
     );
@@ -151,13 +152,13 @@ class ScoreboardWidget extends StatelessWidget {
 
   Widget _buildTableHeader(BuildContext context, String text, {bool isTotal = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
       child: Center(
         child: Text(
           text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          style: ShadTheme.of(context).textTheme.small.copyWith(
             fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: ShadTheme.of(context).colorScheme.foreground,
           ),
         ),
       ),
@@ -166,24 +167,27 @@ class ScoreboardWidget extends StatelessWidget {
 
   Widget _buildTeamNameCell(BuildContext context, String name, bool isActive) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: Row(
         children: [
           if (isActive)
             Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.only(right: 4),
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(right: 6),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
+                color: ShadTheme.of(context).colorScheme.primary,
                 shape: BoxShape.circle,
               ),
             ),
           Expanded(
             child: Text(
               name,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: ShadTheme.of(context).textTheme.p.copyWith(
                 fontWeight: FontWeight.w600,
+                color: isActive 
+                    ? ShadTheme.of(context).colorScheme.primary
+                    : ShadTheme.of(context).colorScheme.foreground,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -195,20 +199,20 @@ class ScoreboardWidget extends StatelessWidget {
 
   Widget _buildScoreCell(BuildContext context, String score, {bool isActive = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: isActive
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+            ? ShadTheme.of(context).colorScheme.primary.withOpacity(0.2)
             : null,
       ),
       child: Center(
         child: Text(
           score,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          style: ShadTheme.of(context).textTheme.p.copyWith(
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
             color: isActive
-                ? Theme.of(context).colorScheme.primary
-                : null,
+                ? ShadTheme.of(context).colorScheme.primary
+                : ShadTheme.of(context).colorScheme.foreground,
           ),
         ),
       ),
@@ -217,15 +221,16 @@ class ScoreboardWidget extends StatelessWidget {
 
   Widget _buildTotalCell(BuildContext context, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        color: ShadTheme.of(context).colorScheme.muted.withOpacity(0.5),
       ),
       child: Center(
         child: Text(
           value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          style: ShadTheme.of(context).textTheme.p.copyWith(
             fontWeight: FontWeight.bold,
+            color: ShadTheme.of(context).colorScheme.foreground,
           ),
         ),
       ),
@@ -286,32 +291,32 @@ class ScoreboardWidget extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          style: ShadTheme.of(context).textTheme.small.copyWith(
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: ShadTheme.of(context).colorScheme.foreground,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(maxCount, (index) {
             final isActive = index < count;
             return Container(
-              width: 16,
-              height: 16,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
+              width: 18,
+              height: 18,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isActive ? activeColor : Colors.grey.shade300,
+                color: isActive ? activeColor : ShadTheme.of(context).colorScheme.muted,
                 border: Border.all(
-                  color: isActive ? activeColor.withOpacity(0.8) : Colors.grey.shade400,
-                  width: 1,
+                  color: isActive ? activeColor.withOpacity(0.8) : ShadTheme.of(context).colorScheme.border,
+                  width: 2,
                 ),
                 boxShadow: isActive
                     ? [
                         BoxShadow(
-                          color: activeColor.withOpacity(0.3),
-                          blurRadius: 4,
+                          color: activeColor.withOpacity(0.4),
+                          blurRadius: 6,
                           spreadRadius: 1,
                         ),
                       ]
@@ -319,6 +324,14 @@ class ScoreboardWidget extends StatelessWidget {
               ),
             );
           }),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$count',
+          style: ShadTheme.of(context).textTheme.h4.copyWith(
+            fontWeight: FontWeight.bold,
+            color: count > 0 ? activeColor : ShadTheme.of(context).colorScheme.mutedForeground,
+          ),
         ),
       ],
     );

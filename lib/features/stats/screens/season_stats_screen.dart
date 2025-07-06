@@ -7,23 +7,20 @@ import '../services/stats_service.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/player_stats_table.dart';
 import '../widgets/batting_average_chart.dart';
-import 'player_stats_screen.dart';
 
-class TeamStatsScreen extends StatefulWidget {
-  const TeamStatsScreen({super.key});
+class SeasonStatsScreen extends StatefulWidget {
+  const SeasonStatsScreen({super.key});
 
   @override
-  State<TeamStatsScreen> createState() => _TeamStatsScreenState();
+  State<SeasonStatsScreen> createState() => _SeasonStatsScreenState();
 }
 
-class _TeamStatsScreenState extends State<TeamStatsScreen>
+class _SeasonStatsScreenState extends State<SeasonStatsScreen>
     with TickerProviderStateMixin {
   final _statsService = GetIt.I<StatsService>();
   late final TabController _tabController;
-  
+
   // Use signals instead of setState
-  late final Signal<String> sortBy;
-  late final Signal<bool> ascending;
   late final Signal<bool> isLoading;
   late final Signal<String?> error;
 
@@ -33,12 +30,10 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
     _tabController = TabController(length: 3, vsync: this);
     
     // Initialize signals
-    sortBy = signal('battingAverage');
-    ascending = signal(false);
     isLoading = signal(false);
     error = signal(null);
     
-    _loadStats();
+    _loadSeasonStats();
   }
 
   @override
@@ -47,7 +42,7 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
     super.dispose();
   }
 
-  Future<void> _loadStats() async {
+  Future<void> _loadSeasonStats() async {
     isLoading.value = true;
     error.value = null;
 
@@ -57,15 +52,6 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
       error.value = e.toString();
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  void _updateSort(String newSortBy) {
-    if (sortBy.value == newSortBy) {
-      ascending.value = !ascending.value;
-    } else {
-      sortBy.value = newSortBy;
-      ascending.value = false;
     }
   }
 
@@ -79,51 +65,6 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
         final errorMessage = error.value;
         final playerStats = _statsService.playerStats.value;
         final teamStats = _statsService.teamStats.value;
-        final currentSortBy = sortBy.value;
-        final currentAscending = ascending.value;
-
-        // Sort player stats based on current sort criteria
-        final sortedPlayerStats = [...playerStats];
-        sortedPlayerStats.sort((a, b) {
-          dynamic aValue, bValue;
-          
-          switch (currentSortBy) {
-            case 'name':
-              aValue = a.playerName;
-              bValue = b.playerName;
-              break;
-            case 'battingAverage':
-              aValue = a.battingAverage;
-              bValue = b.battingAverage;
-              break;
-            case 'hits':
-              aValue = a.hits;
-              bValue = b.hits;
-              break;
-            case 'runs':
-              aValue = a.runs;
-              bValue = b.runs;
-              break;
-            case 'rbis':
-              aValue = a.rbis;
-              bValue = b.rbis;
-              break;
-            case 'homeRuns':
-              aValue = a.homeRuns;
-              bValue = b.homeRuns;
-              break;
-            case 'ops':
-              aValue = a.ops;
-              bValue = b.ops;
-              break;
-            default:
-              aValue = a.battingAverage;
-              bValue = b.battingAverage;
-          }
-          
-          final comparison = aValue.compareTo(bValue);
-          return currentAscending ? comparison : -comparison;
-        });
 
         return Scaffold(
           backgroundColor: theme.colorScheme.surface,
@@ -132,14 +73,14 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
             elevation: 0,
             surfaceTintColor: Colors.transparent,
             title: Text(
-              'Estadísticas del Equipo',
+              'Estadísticas de Temporada',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             actions: [
               ShadButton.ghost(
-                onPressed: _loadStats,
+                onPressed: _loadSeasonStats,
                 child: const Icon(LucideIcons.refreshCw, size: 20),
               ),
               const SizedBox(width: 8),
@@ -149,7 +90,7 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
               ? const Center(child: CircularProgressIndicator())
               : errorMessage != null
                   ? _buildErrorState(errorMessage)
-                  : _buildContent(sortedPlayerStats, teamStats, currentSortBy, currentAscending),
+                  : _buildContent(playerStats, teamStats),
         );
       },
     );
@@ -185,7 +126,7 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
               ),
               const SizedBox(height: 16),
               ShadButton(
-                onPressed: _loadStats,
+                onPressed: _loadSeasonStats,
                 child: const Text('Reintentar'),
               ),
             ],
@@ -195,7 +136,7 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
     );
   }
 
-  Widget _buildContent(List<PlayerStats> sortedPlayerStats, TeamStats? teamStats, String currentSortBy, bool currentAscending) {
+  Widget _buildContent(List<PlayerStats> playerStats, TeamStats? teamStats) {
     return Column(
       children: [
         // Tab Bar
@@ -217,13 +158,13 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
         // Tab Content
         Expanded(
           child: RefreshIndicator(
-            onRefresh: _loadStats,
+            onRefresh: _loadSeasonStats,
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildOverviewTab(sortedPlayerStats, teamStats),
-                _buildPlayersTab(sortedPlayerStats, currentSortBy, currentAscending),
-                _buildChartsTab(sortedPlayerStats),
+                _buildOverviewTab(playerStats, teamStats),
+                _buildPlayersTab(playerStats),
+                _buildChartsTab(playerStats),
               ],
             ),
           ),
@@ -249,23 +190,12 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
     );
   }
 
-  Widget _buildPlayersTab(List<PlayerStats> playerStats, String currentSortBy, bool currentAscending) {
+  Widget _buildPlayersTab(List<PlayerStats> playerStats) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: PlayerStatsTable(
         playerStats: playerStats,
-        sortBy: currentSortBy,
-        ascending: currentAscending,
-        onSort: _updateSort,
-        onPlayerTap: (stats) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => PlayerStatsScreen(
-                playerId: stats.playerId,
-              ),
-            ),
-          );
-        },
+        onPlayerTap: null, // Could navigate to individual player stats
       ),
     );
   }
@@ -277,7 +207,7 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Promedios de Bateo del Equipo',
+            'Promedios de Bateo',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -285,18 +215,18 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
           const SizedBox(height: 16),
           BattingAverageChart(
             playerStats: playerStats,
-            showTopPlayersOnly: false,
+            showTopPlayersOnly: true,
           ),
           const SizedBox(height: 32),
           
           Text(
-            'Distribución de Rendimiento',
+            'Distribución de Estadísticas',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          _buildPerformanceDistribution(playerStats),
+          _buildStatsDistribution(playerStats),
         ],
       ),
     );
@@ -353,11 +283,11 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
             const SizedBox(width: 12),
             Expanded(
               child: StatCard(
-                title: 'Total Hits',
-                value: '${teamStats.totalHits}',
-                subtitle: '${teamStats.totalAtBats} VB',
-                icon: LucideIcons.circle,
-                iconColor: Colors.green,
+                title: 'Juegos',
+                value: '${teamStats.totalGames}',
+                subtitle: 'Completados',
+                icon: LucideIcons.calendar,
+                iconColor: Colors.purple,
               ),
             ),
           ],
@@ -369,32 +299,6 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
   Widget _buildTopPerformersSection(List<PlayerStats> playerStats) {
     final theme = Theme.of(context);
     
-    if (playerStats.isEmpty) {
-      return ShadCard(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(
-                  LucideIcons.users,
-                  size: 48,
-                  color: theme.colorScheme.onSurface.withOpacity(0.3),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No hay estadísticas disponibles',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    
     // Get top performers
     final topHitters = [...playerStats]
       ..sort((a, b) => b.battingAverage.compareTo(a.battingAverage))
@@ -404,108 +308,102 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
       ..sort((a, b) => b.rbis.compareTo(a.rbis))
       ..take(3);
     
-    final topOPS = [...playerStats]
-      ..sort((a, b) => b.ops.compareTo(a.ops))
-      ..take(3);
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Líderes del Equipo',
+          'Mejores Rendimientos',
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 16),
         
-        Row(
-          children: [
-            Expanded(
-              child: _buildLeaderCard('Mejor Promedio', topHitters),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildLeaderCard('Más CI', topRBI),
-            ),
-          ],
+        // Top Hitters
+        Text(
+          'Mejor Promedio',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        ShadCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: topHitters
+                  .map((stats) => _buildLeaderRow(
+                      stats.playerName,
+                      stats.battingAverageDisplay,
+                      stats.playerNumber))
+                  .toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
         
-        _buildLeaderCard('Mejor OPS', topOPS),
+        // Top RBI
+        Text(
+          'Más Carreras Impulsadas',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ShadCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: topRBI
+                  .map((stats) => _buildLeaderRow(
+                      stats.playerName,
+                      '${stats.rbis}',
+                      stats.playerNumber))
+                  .toList(),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildLeaderCard(String title, List<PlayerStats> leaders) {
-    return ShadCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...leaders.map((stats) => _buildLeaderItem(stats, title)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLeaderItem(PlayerStats stats, String category) {
+  Widget _buildLeaderRow(String playerName, String value, int playerNumber) {
     final theme = Theme.of(context);
-    String value;
-    
-    if (category.contains('Promedio')) {
-      value = stats.battingAverageDisplay;
-    } else if (category.contains('CI')) {
-      value = '${stats.rbis}';
-    } else {
-      value = stats.ops.toStringAsFixed(3);
-    }
     
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
-            width: 20,
-            height: 20,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Center(
               child: Text(
-                '${stats.playerNumber}',
+                '$playerNumber',
                 style: TextStyle(
-                  fontSize: 8,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              stats.playerName,
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
+              playerName,
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
           Text(
             value,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 16,
             ),
           ),
         ],
@@ -513,50 +411,34 @@ class _TeamStatsScreenState extends State<TeamStatsScreen>
     );
   }
 
-  Widget _buildPerformanceDistribution(List<PlayerStats> playerStats) {
-    if (playerStats.isEmpty) {
-      return const ShadCard(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Center(
-            child: Text('No hay datos para mostrar'),
-          ),
-        ),
-      );
-    }
-
-    final excellentCount = playerStats.where((p) => p.battingAverage >= 0.300).length;
-    final goodCount = playerStats.where((p) => p.battingAverage >= 0.250 && p.battingAverage < 0.300).length;
-    final needsImprovementCount = playerStats.where((p) => p.battingAverage < 0.250).length;
-    
+  Widget _buildStatsDistribution(List<PlayerStats> playerStats) {
     return ShadCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Distribución de Promedios de Bateo',
+              'Distribución de Rendimiento',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
             _buildDistributionRow(
-              'Excelente (≥ .300)',
-              excellentCount,
+              'Promedio > .300',
+              playerStats.where((p) => p.battingAverage > 0.300).length,
               playerStats.length,
               Colors.green,
             ),
             _buildDistributionRow(
-              'Bueno (.250 - .299)',
-              goodCount,
+              'Promedio .250-.300',
+              playerStats.where((p) => p.battingAverage >= 0.250 && p.battingAverage <= 0.300).length,
               playerStats.length,
               Colors.orange,
             ),
             _buildDistributionRow(
-              'Necesita mejorar (< .250)',
-              needsImprovementCount,
+              'Promedio < .250',
+              playerStats.where((p) => p.battingAverage < 0.250).length,
               playerStats.length,
               Colors.red,
             ),

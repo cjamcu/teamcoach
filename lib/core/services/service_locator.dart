@@ -3,6 +3,7 @@ import 'package:teamcoach/core/services/appwrite_service.dart';
 import 'package:teamcoach/features/roster/services/player_service.dart';
 import 'package:teamcoach/features/games/services/game_service.dart';
 import 'package:teamcoach/features/plays/services/play_service.dart';
+import 'package:teamcoach/features/stats/services/stats_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -17,4 +18,5 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton<PlayerService>(() => PlayerService());
   getIt.registerLazySingleton<GameService>(() => GameService());
   getIt.registerLazySingleton<PlayService>(() => PlayService());
+  getIt.registerLazySingleton<StatsService>(() => StatsService());
 } 

@@ -260,6 +260,29 @@ class PlayerService {
     searchQuery.value = query;
   }
   
+  // Get player by ID
+  Future<Player?> getPlayer(String playerId) async {
+    try {
+      // First try to find in local cache
+      final localPlayer = players.value.where((p) => p.id == playerId).firstOrNull;
+      if (localPlayer != null) {
+        return localPlayer;
+      }
+      
+      // If not found locally, fetch from database
+      final doc = await _appwrite.databases.getDocument(
+        databaseId: AppwriteService.databaseId,
+        collectionId: AppwriteService.playersCollection,
+        documentId: playerId,
+      );
+      
+      return Player.fromJson(doc.data);
+    } catch (e) {
+      error.value = 'Error al obtener jugador: $e';
+      return null;
+    }
+  }
+  
   // Singleton
   static void registerService() {
     GetIt.I.registerLazySingleton<PlayerService>(() => PlayerService());

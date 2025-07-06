@@ -204,7 +204,7 @@ class GameService {
     }
   }
 
-  // Obtener alineación del juego
+  // Obtener alineación del juego con datos del jugador
   Future<List<GameLineup>> getGameLineup(String gameId) async {
     try {
       final response = await _appwrite.databases.listDocuments(
@@ -216,9 +216,30 @@ class GameService {
         ],
       );
       
-      return response.documents
-          .map((doc) => GameLineup.fromJson(doc.data))
-          .toList();
+      // Cargar datos de los jugadores
+      final lineupList = <GameLineup>[];
+      
+      for (final doc in response.documents) {
+        final lineup = GameLineup.fromJson(doc.data);
+        
+        try {
+          // Cargar datos del jugador
+          final playerResponse = await _appwrite.databases.getDocument(
+            databaseId: AppwriteService.databaseId,
+            collectionId: AppwriteService.playersCollection,
+            documentId: lineup.playerId,
+          );
+          
+          final player = Player.fromJson(playerResponse.data);
+          lineupList.add(lineup.copyWith(player: player));
+        } catch (e) {
+          // Si no se puede cargar el jugador, agregarlo sin datos de jugador
+          print('Error al cargar jugador ${lineup.playerId}: $e');
+          lineupList.add(lineup);
+        }
+      }
+      
+      return lineupList;
     } catch (e) {
       throw Exception('Error al cargar alineación: $e');
     }
@@ -273,4 +294,27 @@ class GameService {
   int get wins => games.value.where((g) => g.isWin).length;
   int get losses => games.value.where((g) => g.isLoss).length;
   double get winPercentage => completedGames > 0 ? wins / completedGames : 0.0;
+
+  // Get game by ID
+  Future<Game?> getGame(String gameId) async {
+    try {
+      // First try to find in local cache
+      final localGame = games.value.where((g) => g.id == gameId).firstOrNull;
+      if (localGame != null) {
+        return localGame;
+      }
+      
+      // If not found locally, fetch from database
+      final doc = await _appwrite.databases.getDocument(
+        databaseId: AppwriteService.databaseId,
+        collectionId: AppwriteService.gamesCollection,
+        documentId: gameId,
+      );
+      
+      return Game.fromJson(doc.data);
+    } catch (e) {
+      error.value = 'Error al obtener juego: $e';
+      return null;
+    }
+  }
 } 
